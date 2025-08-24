@@ -1,159 +1,166 @@
-const toggleButton = document.querySelector(".themes__toggle");
-const numbers = document.querySelectorAll('[data-type="number"]');
-const operations = document.querySelectorAll('[data-type="operation"]');
-const calculResult = document.querySelector(".calc__result");
-let previousValue = "";
-let currentValue = "";
-let operand = "";
+// Light/Dark Theme
+const toggleElement = document.querySelector(".themes__toggle");
 
-const switchColor = () => {
-  toggleButton.classList.toggle("themes__toggle--isActive");
+const toggleDarkTheme = () =>
+  toggleElement.classList.toggle("themes__toggle--isActive");
+
+const toggleDarkThemeWithEnter = (event) => {
+  event.key === "Enter" && toggleDarkTheme();
 };
 
-toggleButton.addEventListener("click", switchColor);
-toggleButton.addEventListener("keydown", (event) => {
-  event.key === "Enter" && switchColor();
-});
+toggleElement.addEventListener("keydown", toggleDarkThemeWithEnter);
+toggleElement.addEventListener("click", toggleDarkTheme);
 
-//print numbers
+// Logic for calculator
+let storedNumber = "";
+let currentNumber = "";
+let operation = "";
 
-const printNumber = () => {
-  numbers.forEach((number) => {
-    number.addEventListener("click", () => {
-      if (calculResult.innerText.includes(".") && number.dataset.value === ".")
-        return;
+const resultElement = document.querySelector(".calc__result");
+const keyElements = document.querySelectorAll("[data-type]");
 
-      if (
-        calculResult.innerText[0] === "0" &&
-        !calculResult.innerText.includes(".")
-      ) {
-        calculResult.innerText = number.dataset.value;
-      } else calculResult.innerText += number.dataset.value;
-
-      if (calculResult.innerText[0] === ".") {
-        calculResult.innerText = "0.";
-      }
-    });
-  });
+const updateScreen = (value) => {
+  resultElement.innerText = !value ? "0" : value;
 };
 
-//Reset
-const resetUI = () => {
-  const resetButon = operations[5];
-  resetButon.addEventListener("click", () => {
-    calculResult.innerText = "0";
-    previousValue = "";
-    currentValue = "";
-    operand = "";
-  });
+const numberButtonHandler = (value) => {
+  if (value === "." && currentNumber.includes(".")) return;
+  if (value === "0" && !currentNumber) return;
+  if (currentNumber.length === 18) return;
+  console.log(currentNumber);
+  currentNumber += value;
+  updateScreen(currentNumber);
 };
 
-// Del;
-const delNumber = () => {
-  operations[0].addEventListener("click", () => {
-    if (!currentValue || currentValue === "0") {
-      if (!operand) {
-        if (!previousValue || previousValue === "0") return;
-        else if (previousValue.length === 1) {
-          calculResult.innerText = "0";
-          previousValue = "";
-        } else {
-          calculResult.innerText = calculResult.innerText.slice(0, -1);
-          previousValue = calculResult.innerText;
-        }
-      } else operand = "";
-    } else if (currentValue.length === 1) {
-      calculResult.innerText = "0";
-      currentValue = "";
-    } else {
-      calculResult.innerText = calculResult.innerText.slice(0, -1);
-      currentValue = calculResult.innerText;
-    }
-  });
+const resetButtonHandler = () => {
+  storedNumber = "";
+  currentNumber = "";
+  operation = "";
+  updateScreen(currentNumber);
 };
 
-const updateUI = () => {
-  numbers.forEach((number) => {
-    number.addEventListener("click", () => {
-      if (!operand) {
-        if (
-          calculResult.innerText.includes(".") &&
-          number.dataset.value === "."
-        )
-          return;
-        else {
-          previousValue += number.dataset.value;
-          calculResult.innerText = previousValue;
-        }
-      } else {
-        if (
-          calculResult.innerText.includes(".") &&
-          number.dataset.value === "."
-        )
-          return;
-        else {
-          currentValue += number.dataset.value;
-          calculResult.innerText = currentValue;
-        }
-      }
-    });
-  });
+const deleteButtonHandler = () => {
+  if (!currentNumber || currentNumber === "0") return;
 
-  operations.forEach((operation) => {
-    operation.addEventListener("click", () => {
-      if (!previousValue) return;
-      else if (
-        operation.dataset.value != "c" &&
-        operation.dataset.value != "Backspace" &&
-        operation.dataset.value != "Enter"
-      ) {
-        operand = operation.dataset.value;
-        calculResult.innerText = operand;
-      }
-    });
-  });
+  if (currentNumber.length === 1) {
+    currentNumber = "";
+  } else {
+    currentNumber = currentNumber.substring(0, currentNumber.length - 1);
+  }
 
-  return {
-    previousValue,
-    operand,
-    currentValue,
-  };
+  updateScreen(currentNumber);
 };
 
-const operationsHandler = () => {
-  updateUI();
-
-  operations[6].addEventListener("click", () => {
-    switch (operand) {
+const executeOperation = () => {
+  if (currentNumber && storedNumber && operation) {
+    switch (operation) {
       case "+":
-        calculResult.innerText = String(
-          Number(previousValue) + Number(currentValue)
-        );
+        storedNumber = parseFloat(storedNumber) + parseFloat(currentNumber);
         break;
-
       case "-":
-        calculResult.innerText = String(
-          Number(previousValue) - Number(currentValue)
-        );
+        storedNumber = parseFloat(storedNumber) - parseFloat(currentNumber);
         break;
       case "*":
-        calculResult.innerText = String(
-          Number(previousValue) * Number(currentValue)
-        );
+        storedNumber = parseFloat(storedNumber) * parseFloat(currentNumber);
         break;
-
       case "/":
-        calculResult.innerText = String(
-          Number(previousValue) / Number(currentValue)
-        );
+        storedNumber = parseFloat(storedNumber) / parseFloat(currentNumber);
         break;
+    }
 
-      default:
-        return;
+    currentNumber = "";
+    updateScreen(storedNumber);
+  }
+};
+
+const operationButtonHandler = (operationValue) => {
+  if (!storedNumber && !currentNumber) return;
+
+  if (currentNumber && !storedNumber) {
+    storedNumber = currentNumber;
+    currentNumber = "";
+    operation = operationValue;
+  } else if (storedNumber) {
+    operation = operationValue;
+
+    if (currentNumber) executeOperation();
+  }
+};
+
+const keyElementsHandler = (element) => {
+  element.addEventListener("click", () => {
+    const type = element.dataset.type;
+
+    if (type === "number") {
+      numberButtonHandler(element.dataset.value);
+    } else if (type === "operation") {
+      switch (element.dataset.value) {
+        case "c":
+          resetButtonHandler();
+          break;
+        case "Backspace":
+          deleteButtonHandler();
+          break;
+        case "Enter":
+          executeOperation();
+          break;
+        default:
+          operationButtonHandler(element.dataset.value);
+      }
     }
   });
 };
 
-resetUI();
-delNumber();
-operationsHandler();
+keyElements.forEach(keyElementsHandler);
+
+// Use keyboard as input source
+const availableNumbers = [
+  "0",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  ".",
+];
+const availableOperations = ["+", "-", "*", "/"];
+const availableKeys = [
+  ...availableNumbers,
+  ...availableOperations,
+  "Backspace",
+  "Enter",
+  "c",
+];
+
+window.addEventListener("keydown", (event) => {
+  //   keyboardWithoutHover(event.key);
+  keyboardWithHover(event.key);
+});
+
+const keyboardWithoutHover = (key) => {
+  if (availableNumbers.includes(key)) {
+    numberButtonHandler(key);
+  } else if (availableOperations.includes(key)) {
+    operationButtonHandler(key);
+  } else if (key === "Backspace") {
+    deleteButtonHandler();
+  } else if (key === "Enter") {
+    executeOperation();
+  } else if (key === "c") {
+    resetButtonHandler();
+  }
+};
+
+const keyboardWithHover = (key) => {
+  if (availableKeys.includes(key)) {
+    const elem = document.querySelector(`[data-value="${key}"]`);
+
+    elem.classList.add("hover");
+    elem.click();
+    setTimeout(() => elem.classList.remove("hover"), 100);
+  }
+};
